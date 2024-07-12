@@ -52,13 +52,26 @@ func init() {
 	deployCmd.Flags().IntVarP(&workerNodes, "worker-nodes", "w", 1, "Number of worker nodes (1-3)")
 }
 
-func deployCluster(controlNodes int, workerNodes int) []byte {
-	fmt.Printf("Deploying Kubernetes cluster with %d control node(s) and %d worker node(s)...", controlNodes, workerNodes)
-	// Create LaunchReqs with default values (including default Image)
-	launchReq := multipass.NewLaunchReqs("50G", "2G", "2", "controller-node-2")
-	instance, err := multipass.Launch(launchReq)
-	if err != nil {
-		log.Fatal(err)
+func deployCluster(controlNodes int, workerNodes int) {
+	fmt.Printf("Deploying Kubernetes cluster with %d control node(s) and %d worker node(s)...\n", controlNodes, workerNodes)
+	for i := 1; i <= controlNodes; i++ {
+		nodeName := fmt.Sprintf("controller-node-%d", i)
+		fmt.Printf("Deploying node %v\n", nodeName)
+		launchReq := multipass.NewLaunchReqs("50G", "2G", "2", nodeName)
+		instance, err := multipass.Launch(launchReq)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("The IP address of %v is %v\n", nodeName, instance.IPv4)
 	}
-	return instance
+	for i := 1; i <= workerNodes; i++ {
+		nodeName := fmt.Sprintf("worker-node-%d", i)
+		fmt.Printf("Deploying node %v\n", nodeName)
+		launchReq := multipass.NewLaunchReqs("50G", "2G", "2", nodeName)
+		instance, err := multipass.Launch(launchReq)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("The IP address of %v is %v\n", nodeName, instance.IPv4)
+	}
 }

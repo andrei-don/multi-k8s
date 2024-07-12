@@ -23,7 +23,7 @@ func NewLaunchReqs(disk, memory, cpus, name string) *LaunchReqs {
 	}
 }
 
-func Launch(launchReq *LaunchReqs) ([]byte, error) {
+func Launch(launchReq *LaunchReqs) (*Instance, error) {
 	var args = ""
 	if launchReq.Image != "" {
 		args = args + fmt.Sprintf(" %v", launchReq.Image)
@@ -49,5 +49,11 @@ func Launch(launchReq *LaunchReqs) ([]byte, error) {
 		fmt.Println(string(stdout))
 		return nil, err
 	}
-	return stdout, nil
+
+	instance, err := InstanceInfo(&InfoReq{Name: launchReq.Name})
+	if err != nil {
+		return nil, err
+	}
+
+	return instance, nil
 }

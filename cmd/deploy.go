@@ -4,10 +4,9 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
-	"fmt"
 	"log"
 
-	"github.com/andrei-don/multi-k8s/multipass"
+	"github.com/andrei-don/multi-k8s/k8s"
 	"github.com/spf13/cobra"
 )
 
@@ -37,7 +36,7 @@ var deployCmd = &cobra.Command{
 		if workerNodes+controlNodes > 4 {
 			log.Fatal("Cannot have more than 4 local nodes.")
 		}
-		deployCluster(controlNodes, workerNodes)
+		k8s.DeployClusterVMs(controlNodes, workerNodes)
 	},
 }
 
@@ -50,28 +49,4 @@ func init() {
 	// is called directly, e.g.:
 	deployCmd.Flags().IntVarP(&controlNodes, "control-nodes", "c", 1, "Number of control nodes (1 or 3)")
 	deployCmd.Flags().IntVarP(&workerNodes, "worker-nodes", "w", 1, "Number of worker nodes (1-3)")
-}
-
-func deployCluster(controlNodes int, workerNodes int) {
-	fmt.Printf("Deploying Kubernetes cluster with %d control node(s) and %d worker node(s)...\n", controlNodes, workerNodes)
-	for i := 1; i <= controlNodes; i++ {
-		nodeName := fmt.Sprintf("controller-node-%d", i)
-		fmt.Printf("Deploying node %v\n", nodeName)
-		launchReq := multipass.NewLaunchReqs("50G", "2G", "2", nodeName)
-		instance, err := multipass.Launch(launchReq)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("The IP address of %v is %v\n", nodeName, instance.IPv4)
-	}
-	for i := 1; i <= workerNodes; i++ {
-		nodeName := fmt.Sprintf("worker-node-%d", i)
-		fmt.Printf("Deploying node %v\n", nodeName)
-		launchReq := multipass.NewLaunchReqs("50G", "2G", "2", nodeName)
-		instance, err := multipass.Launch(launchReq)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Printf("The IP address of %v is %v\n", nodeName, instance.IPv4)
-	}
 }

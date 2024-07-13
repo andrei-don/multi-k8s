@@ -23,7 +23,7 @@ type InfoReq struct {
 	Name string
 }
 
-func InstanceOutput(stdout string) *Instance {
+func instanceOutput(stdout string) *Instance {
 	var instance Instance
 	for _, line := range strings.Split(stdout, "\n") {
 		if strings.Contains(line, Name) {
@@ -53,5 +53,5 @@ func InstanceInfo(req *InfoReq) (*Instance, error) {
 	if err != nil {
 		return nil, err
 	}
-	return InstanceOutput(string(stdout)), nil
+	return instanceOutput(string(stdout)), nil
 }

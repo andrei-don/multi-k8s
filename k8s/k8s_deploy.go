@@ -7,12 +7,13 @@ import (
 	"github.com/andrei-don/multi-k8s/multipass"
 )
 
+// DeployClusterVMs deploys the VMs needed for the controller/worker nodes. It takes the input from the 'multi-k8s deploy' flags.
 func DeployClusterVMs(controlNodes int, workerNodes int) {
 	fmt.Printf("Deploying Kubernetes cluster with %d control node(s) and %d worker node(s)...\n", controlNodes, workerNodes)
 	for i := 1; i <= controlNodes; i++ {
 		nodeName := fmt.Sprintf("controller-node-%d", i)
 		fmt.Printf("Deploying node %v\n", nodeName)
-		launchReq := multipass.NewLaunchReqs("50G", "2G", "2", nodeName)
+		launchReq := multipass.NewLaunchReq("50G", "2G", "2", nodeName)
 		instance, err := multipass.Launch(launchReq)
 		if err != nil {
 			log.Fatal(err)
@@ -22,7 +23,7 @@ func DeployClusterVMs(controlNodes int, workerNodes int) {
 	for i := 1; i <= workerNodes; i++ {
 		nodeName := fmt.Sprintf("worker-node-%d", i)
 		fmt.Printf("Deploying node %v\n", nodeName)
-		launchReq := multipass.NewLaunchReqs("50G", "2G", "2", nodeName)
+		launchReq := multipass.NewLaunchReq("50G", "2G", "2", nodeName)
 		instance, err := multipass.Launch(launchReq)
 		if err != nil {
 			log.Fatal(err)

@@ -5,9 +5,8 @@ package cmd
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
 
+	"github.com/andrei-don/multi-k8s/k8s"
 	"github.com/andrei-don/multi-k8s/multipass"
 	"github.com/spf13/cobra"
 )
@@ -23,7 +22,7 @@ var listCmd = &cobra.Command{
 			fmt.Println("Error listing multipass nodes:", err)
 			return
 		}
-		fmt.Println(filterNodesList(multipassList))
+		fmt.Println(k8s.FilterNodesListCmd(multipassList))
 	},
 }
 
@@ -39,21 +38,4 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-}
-
-// Function below is used to filter through the 'multipass list' command and return only the cluster nodes (assuming that there are other unrelated multipass nodes as well)
-func filterNodesList(multipassNodes string) string {
-	lines := strings.Split(multipassNodes, "\n")
-
-	var result []string
-
-	re := regexp.MustCompile(`^(controller-node-[123]|worker-node-[123])\s+.*`)
-
-	for _, line := range lines {
-		if re.MatchString(line) || strings.HasPrefix(line, "Name") {
-			result = append(result, line)
-		}
-	}
-
-	return strings.Join(result, "\n")
 }

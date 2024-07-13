@@ -5,11 +5,11 @@ import (
 	"os/exec"
 )
 
-type deleteReq struct {
+type DeleteReq struct {
 	Name string
 }
 
-func Delete(req *deleteReq) error {
+func Delete(req *DeleteReq) error {
 	cmd := fmt.Sprintf("multipass delete -p %v", req.Name)
 	cmdExec := exec.Command("sh", "-c", cmd)
 

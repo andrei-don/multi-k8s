@@ -6,6 +6,8 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/andrei-don/multi-k8s/k8s"
+	"github.com/andrei-don/multi-k8s/multipass"
 	"github.com/spf13/cobra"
 )
 
@@ -13,14 +15,14 @@ import (
 var destroyCmd = &cobra.Command{
 	Use:   "destroy",
 	Short: "Command for destroying a cluster",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Long:  `Run this command to destroy your multi-k8s cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("destroy called")
+		multipassList, err := multipass.List()
+		if err != nil {
+			fmt.Println("Error listing multipass nodes:", err)
+			return
+		}
+		k8s.DeleteClusterVMs(k8s.GetCurrentNodes(k8s.FilterNodesListCmd(multipassList)))
 	},
 }
 

@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-type LaunchReqs struct {
+type LaunchReq struct {
 	Disk   string
 	Memory string
 	Cpus   string
@@ -13,8 +13,8 @@ type LaunchReqs struct {
 	Image  string
 }
 
-func NewLaunchReqs(disk, memory, cpus, name string) *LaunchReqs {
-	return &LaunchReqs{
+func NewLaunchReq(disk, memory, cpus, name string) *LaunchReq {
+	return &LaunchReq{
 		Disk:   disk,
 		Memory: memory,
 		Cpus:   cpus,
@@ -23,7 +23,7 @@ func NewLaunchReqs(disk, memory, cpus, name string) *LaunchReqs {
 	}
 }
 
-func Launch(launchReq *LaunchReqs) (*Instance, error) {
+func Launch(launchReq *LaunchReq) (*Instance, error) {
 	var args = ""
 	if launchReq.Image != "" {
 		args = args + fmt.Sprintf(" %v", launchReq.Image)

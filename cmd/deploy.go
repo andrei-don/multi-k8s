@@ -7,8 +7,11 @@ import (
 	"log"
 
 	"github.com/andrei-don/multi-k8s/k8s"
+	"github.com/andrei-don/multi-k8s/multipass"
 	"github.com/spf13/cobra"
 )
+
+var deployedInstances []*multipass.Instance
 
 // Flags
 var controlNodes int
@@ -36,7 +39,8 @@ var deployCmd = &cobra.Command{
 		if workerNodes+controlNodes > 4 {
 			log.Fatal("Cannot have more than 4 local nodes.")
 		}
-		k8s.DeployClusterVMs(controlNodes, workerNodes)
+		deployedInstances := k8s.DeployClusterVMs(controlNodes, workerNodes)
+		k8s.CreateHostnamesFile(deployedInstances)
 	},
 }
 

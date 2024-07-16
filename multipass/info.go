@@ -6,17 +6,13 @@ import (
 )
 
 const (
-	Name    = "Name:"
-	State   = "State:"
-	IPv4    = "IPv4:"
-	Release = "Release:"
+	Name = "Name:"
+	IPv4 = "IPv4:"
 )
 
 type Instance struct {
-	Name    string
-	State   string
-	IPv4    string
-	Release string
+	Name string
+	IPv4 string
 }
 
 type InfoReq struct {
@@ -32,14 +28,8 @@ func instanceOutput(stdout string) *Instance {
 			// therefore keeping only the value we are interested in
 			instance.Name = strings.TrimSpace(strings.ReplaceAll(line, Name, ""))
 		}
-		if strings.Contains(line, State) {
-			instance.State = strings.TrimSpace(strings.ReplaceAll(line, State, ""))
-		}
 		if strings.Contains(line, IPv4) {
 			instance.IPv4 = strings.TrimSpace(strings.ReplaceAll(line, IPv4, ""))
-		}
-		if strings.Contains(line, Release) {
-			instance.Release = strings.TrimSpace(strings.ReplaceAll(line, Release, ""))
 		}
 
 	}

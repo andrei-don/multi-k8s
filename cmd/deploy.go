@@ -41,6 +41,7 @@ var deployCmd = &cobra.Command{
 		}
 		deployedInstances := k8s.DeployClusterVMs(controlNodes, workerNodes)
 		k8s.CreateHostnamesFile(deployedInstances)
+		k8s.DownloadBootstrapScripts(deployedInstances)
 	},
 }
 

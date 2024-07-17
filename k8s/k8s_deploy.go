@@ -97,18 +97,19 @@ func DownloadAndRunBootstrapScripts(instances []*multipass.Instance) {
 	}
 }
 
-// FilterControllerNodes takes the list of all instance structs as inputs and returns a list of instance structs corresponding to controller nodes only.
-func FilterControllerNodes(instances []*multipass.Instance) []*multipass.Instance {
+// FilterNodes takes the list of all instance structs as inputs and returns a list of instance structs corresponding to controller or worker nodes only.
+func FilterNodes(instances []*multipass.Instance, nodeType string) []*multipass.Instance {
 	var controllers []*multipass.Instance
 	for _, instance := range instances {
-		if strings.HasPrefix(instance.Name, "controller") {
+		if strings.HasPrefix(instance.Name, nodeType) {
 			controllers = append(controllers, instance)
 		}
 	}
 	return controllers
 }
 
-// ConfigureControlPlane downloads the controlplane configuration script and calico manifest from the multi-k8s-provisioning-scripts repo. It takes the list of controller instances structs from FilterControllerNodes.
+// ConfigureControlPlane takes the list of controller instances structs from FilterNodes. It downloads the controlplane configuration script and calico manifest from the multi-k8s-provisioning-scripts repo.
+// It generates the join-command and transfers it to the local machine.
 func ConfigureControlPlane(instances []*multipass.Instance) {
 	var downloadCommands []string
 	controllerConfigScript := setupControllerScripts[1]
@@ -130,5 +131,30 @@ func ConfigureControlPlane(instances []*multipass.Instance) {
 			log.Fatal(runControllerConfigScript)
 		}
 		fmt.Printf("Ran configuration script for controller node %v\n", instance.Name)
+
+		transferFiles := fmt.Sprintf("%v:/tmp/join-command.sh /tmp/join-command.sh", instance.Name)
+		transferCommand := multipass.Transfer(&multipass.TransferReq{Files: transferFiles})
+		if transferCommand != nil {
+			log.Fatal(transferCommand)
+		}
+		fmt.Printf("Copied join script from controller node %v to your local machine\n", instance.Name)
+	}
+}
+
+// ConfigureWorkerNodes takes the list of worker instances structs from FilterNodes. It transfers the join-command script from the local machine to the worker node and runs it.
+func ConfigureWorkerNodes(instances []*multipass.Instance) {
+	for _, instance := range instances {
+		transferFiles := fmt.Sprintf("/tmp/join-command.sh %v:/tmp/join-command.sh", instance.Name)
+		transferCommand := multipass.Transfer(&multipass.TransferReq{Files: transferFiles})
+		if transferCommand != nil {
+			log.Fatal(transferCommand)
+		}
+		fmt.Printf("Copied join script from your local machine to worker node %v\n", instance.Name)
+		commandJoin := "\"chmod +x /tmp/join-command.sh && sudo /tmp/join-command.sh\""
+		runWorkerJoin := multipass.Exec(&multipass.ExecReq{Name: instance.Name, Script: commandJoin})
+		if runWorkerJoin != nil {
+			log.Fatal(runWorkerJoin)
+		}
+		fmt.Printf("Joined worker node %v to cluster", instance.Name)
 	}
 }

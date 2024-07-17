@@ -43,6 +43,7 @@ var deployCmd = &cobra.Command{
 		k8s.ConfigureControlPlane(controllerInstances)
 		workerInstances := k8s.FilterNodes(deployedInstances, "worker")
 		k8s.ConfigureWorkerNodes(workerInstances)
+		k8s.ConfigurePostDeploy(controllerInstances)
 	},
 }
 

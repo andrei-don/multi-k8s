@@ -16,6 +16,8 @@ var setupCommonScripts = []string{"setup-kernel.sh", "setup-cri.sh", "kube-compo
 
 var setupControllerScripts = []string{"calico.yaml", "configure-single-controlplane.sh"}
 
+var setupPostDeploymentScripts = []string{"common-tasks-controlplane.sh", "approve-worker-csr.sh"}
+
 // DeployClusterVMs deploys the VMs needed for the controller/worker nodes. It takes the input from the 'multi-k8s deploy' flags.
 func DeployClusterVMs(controlNodes int, workerNodes int) []*multipass.Instance {
 	fmt.Printf("Deploying Kubernetes cluster with %d control node(s) and %d worker node(s)...\n", controlNodes, workerNodes)
@@ -62,7 +64,7 @@ func CreateHostnamesFile(instances []*multipass.Instance) {
 		if writeHostnamesFileCmd != nil {
 			log.Fatal(writeHostnamesFileCmd)
 		}
-		fmt.Printf("Added hostnames for node %v\n", instance.Name)
+		fmt.Printf("Added hostnames for %v\n", instance.Name)
 	}
 }
 
@@ -85,7 +87,7 @@ func DownloadAndRunBootstrapScripts(instances []*multipass.Instance) {
 				log.Fatal(downloadBootstrapScript)
 			}
 		}
-		fmt.Printf("Downloaded bootstrap scripts for node %v\n", instance.Name)
+		fmt.Printf("Downloaded bootstrap scripts for %v\n", instance.Name)
 
 		for _, command := range runCommands {
 			runBootstrapScript := multipass.Exec(&multipass.ExecReq{Name: instance.Name, Script: command})
@@ -93,7 +95,7 @@ func DownloadAndRunBootstrapScripts(instances []*multipass.Instance) {
 				log.Fatal(runBootstrapScript)
 			}
 		}
-		fmt.Printf("Ran bootstrap scripts for node %v\n", instance.Name)
+		fmt.Printf("Ran bootstrap scripts for %v\n", instance.Name)
 	}
 }
 
@@ -130,14 +132,14 @@ func ConfigureControlPlane(instances []*multipass.Instance) {
 		if runControllerConfigScript != nil {
 			log.Fatal(runControllerConfigScript)
 		}
-		fmt.Printf("Ran configuration script for controller node %v\n", instance.Name)
+		fmt.Printf("Ran configuration script for %v\n", instance.Name)
 
 		transferFiles := fmt.Sprintf("%v:/tmp/join-command.sh /tmp/join-command.sh", instance.Name)
 		transferCommand := multipass.Transfer(&multipass.TransferReq{Files: transferFiles})
 		if transferCommand != nil {
 			log.Fatal(transferCommand)
 		}
-		fmt.Printf("Copied join script from controller node %v to your local machine\n", instance.Name)
+		fmt.Printf("Copied join script from %v to your local machine\n", instance.Name)
 	}
 }
 
@@ -155,6 +157,34 @@ func ConfigureWorkerNodes(instances []*multipass.Instance) {
 		if runWorkerJoin != nil {
 			log.Fatal(runWorkerJoin)
 		}
-		fmt.Printf("Joined worker node %v to cluster", instance.Name)
+		fmt.Printf("Joined %v to cluster\n", instance.Name)
+	}
+}
+
+func ConfigurePostDeploy(instances []*multipass.Instance) {
+	var downloadCommands []string
+	var runCommands []string
+	for _, script := range setupPostDeploymentScripts {
+		downloadCommand := fmt.Sprintf("\"wget -O /tmp/%v %v/%v\"", script, BootstrapRepoRaw, script)
+		runCommand := fmt.Sprintf("\"chmod +x /tmp/%v && /tmp/%v\"", script, script)
+		downloadCommands = append(downloadCommands, downloadCommand)
+		runCommands = append(runCommands, runCommand)
+	}
+
+	for _, instance := range instances {
+		for _, command := range downloadCommands {
+			downloadPostDeployScript := multipass.Exec(&multipass.ExecReq{Name: instance.Name, Script: command})
+			if downloadPostDeployScript != nil {
+				log.Fatal(downloadPostDeployScript)
+			}
+		}
+
+		for _, command := range runCommands {
+			runPostDeployScript := multipass.Exec(&multipass.ExecReq{Name: instance.Name, Script: command})
+			if runPostDeployScript != nil {
+				log.Fatal(runPostDeployScript)
+			}
+		}
+		fmt.Printf("Added kubectl autocomplete and kubectl related aliases to %v\n", instance.Name)
 	}
 }

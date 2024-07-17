@@ -7,11 +7,8 @@ import (
 	"log"
 
 	"github.com/andrei-don/multi-k8s/k8s"
-	"github.com/andrei-don/multi-k8s/multipass"
 	"github.com/spf13/cobra"
 )
-
-var deployedInstances []*multipass.Instance
 
 // Flags
 var controlNodes int
@@ -41,7 +38,9 @@ var deployCmd = &cobra.Command{
 		}
 		deployedInstances := k8s.DeployClusterVMs(controlNodes, workerNodes)
 		k8s.CreateHostnamesFile(deployedInstances)
-		k8s.DownloadBootstrapScripts(deployedInstances)
+		k8s.DownloadAndRunBootstrapScripts(deployedInstances)
+		controllerInstances := k8s.FilterControllerNodes(deployedInstances)
+		k8s.ConfigureControlPlane(controllerInstances)
 	},
 }
 

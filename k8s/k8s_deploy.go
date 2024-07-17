@@ -3,6 +3,7 @@ package k8s
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/andrei-don/multi-k8s/multipass"
 )
@@ -11,7 +12,9 @@ const (
 	BootstrapRepoRaw = "https://raw.githubusercontent.com/andrei-don/multi-k8s-provisioning-scripts/main"
 )
 
-var setupScripts = []string{"setup-kernel.sh", "setup-cri.sh", "kube-components.sh"}
+var setupCommonScripts = []string{"setup-kernel.sh", "setup-cri.sh", "kube-components.sh"}
+
+var setupControllerScripts = []string{"calico.yaml", "configure-single-controlplane.sh"}
 
 // DeployClusterVMs deploys the VMs needed for the controller/worker nodes. It takes the input from the 'multi-k8s deploy' flags.
 func DeployClusterVMs(controlNodes int, workerNodes int) []*multipass.Instance {
@@ -63,15 +66,19 @@ func CreateHostnamesFile(instances []*multipass.Instance) {
 	}
 }
 
-// DownloadBootstrapScripts downloads the scripts located in the multi-k8s-provisioning-scripts repo
-func DownloadBootstrapScripts(instances []*multipass.Instance) {
+// DownloadBootstrapScripts downloads the scripts located in the multi-k8s-provisioning-scripts repo and runs them on all nodes. It installs kubelet, kubeadm and containerd.
+func DownloadAndRunBootstrapScripts(instances []*multipass.Instance) {
 	var downloadCommands []string
-	for _, script := range setupScripts {
-		command := fmt.Sprintf("\"wget -O /tmp/%v %v/%v\"", script, BootstrapRepoRaw, script)
-		downloadCommands = append(downloadCommands, command)
+	var runCommands []string
+	for _, script := range setupCommonScripts {
+		downloadCommand := fmt.Sprintf("\"wget -O /tmp/%v %v/%v\"", script, BootstrapRepoRaw, script)
+		runCommand := fmt.Sprintf("\"chmod +x /tmp/%v && /tmp/%v\"", script, script)
+		downloadCommands = append(downloadCommands, downloadCommand)
+		runCommands = append(runCommands, runCommand)
 	}
 
 	for _, instance := range instances {
+
 		for _, command := range downloadCommands {
 			downloadBootstrapScript := multipass.Exec(&multipass.ExecReq{Name: instance.Name, Script: command})
 			if downloadBootstrapScript != nil {
@@ -79,5 +86,49 @@ func DownloadBootstrapScripts(instances []*multipass.Instance) {
 			}
 		}
 		fmt.Printf("Downloaded bootstrap scripts for node %v\n", instance.Name)
+
+		for _, command := range runCommands {
+			runBootstrapScript := multipass.Exec(&multipass.ExecReq{Name: instance.Name, Script: command})
+			if runBootstrapScript != nil {
+				log.Fatal(runBootstrapScript)
+			}
+		}
+		fmt.Printf("Ran bootstrap scripts for node %v\n", instance.Name)
+	}
+}
+
+// FilterControllerNodes takes the list of all instance structs as inputs and returns a list of instance structs corresponding to controller nodes only.
+func FilterControllerNodes(instances []*multipass.Instance) []*multipass.Instance {
+	var controllers []*multipass.Instance
+	for _, instance := range instances {
+		if strings.HasPrefix(instance.Name, "controller") {
+			controllers = append(controllers, instance)
+		}
+	}
+	return controllers
+}
+
+// ConfigureControlPlane downloads the controlplane configuration script and calico manifest from the multi-k8s-provisioning-scripts repo. It takes the list of controller instances structs from FilterControllerNodes.
+func ConfigureControlPlane(instances []*multipass.Instance) {
+	var downloadCommands []string
+	controllerConfigScript := setupControllerScripts[1]
+	for _, script := range setupControllerScripts {
+		downloadCommand := fmt.Sprintf("\"wget -O /tmp/%v %v/k8s/%v\"", script, BootstrapRepoRaw, script)
+		downloadCommands = append(downloadCommands, downloadCommand)
+	}
+
+	for _, instance := range instances {
+		for _, command := range downloadCommands {
+			downloadControllerConfigScript := multipass.Exec(&multipass.ExecReq{Name: instance.Name, Script: command})
+			if downloadControllerConfigScript != nil {
+				log.Fatal(downloadControllerConfigScript)
+			}
+		}
+		command := fmt.Sprintf("\"chmod +x /tmp/%v && /tmp/%v\"", controllerConfigScript, controllerConfigScript)
+		runControllerConfigScript := multipass.Exec(&multipass.ExecReq{Name: instance.Name, Script: command})
+		if runControllerConfigScript != nil {
+			log.Fatal(runControllerConfigScript)
+		}
+		fmt.Printf("Ran configuration script for controller node %v\n", instance.Name)
 	}
 }

@@ -16,6 +16,8 @@ var setupCommonScripts = []string{"setup-kernel.sh", "setup-cri.sh", "kube-compo
 
 var setupControllerScripts = []string{"calico.yaml", "configure-single-controlplane.sh"}
 
+var setupHAProxyScript string = "setup-haproxy.sh"
+
 var setupPostDeploymentScripts = []string{"common-tasks-controlplane.sh", "approve-worker-csr.sh"}
 
 // DeployClusterVMs deploys the VMs needed for the controller/worker nodes. It takes the input from the 'multi-k8s deploy' flags.
@@ -143,6 +145,47 @@ func ConfigureControlPlane(instances []*multipass.Instance) {
 	}
 }
 
+func DeployHAProxy(instances []*multipass.Instance) *multipass.Instance {
+	var ipList string
+	launchReqHAProxy := multipass.NewLaunchReq("50G", "2G", "2", "haproxy")
+	haproxy, err := multipass.Launch(launchReqHAProxy)
+	if err != nil {
+		log.Fatal(err)
+	}
+	haproxyIp := fmt.Sprintf("%v\n", haproxy.IPv4)
+	for _, instance := range instances {
+		ip := fmt.Sprintf("%v\n", instance.IPv4)
+		ipList = ipList + ip
+	}
+	ipList = ipList + haproxyIp
+	createIPListCmd := fmt.Sprintf("\"echo '%s' | sudo tee -a -i /tmp/ip_list\"", ipList)
+
+	runCreateIPListCmd := multipass.Exec(&multipass.ExecReq{Name: haproxy.Name, Script: createIPListCmd})
+	if runCreateIPListCmd != nil {
+		log.Fatal(runCreateIPListCmd)
+	}
+
+	downloadCmd := fmt.Sprintf("\"wget -O /tmp/%v %v/%v\"", setupHAProxyScript, BootstrapRepoRaw, setupHAProxyScript)
+	runDownloadCmd := multipass.Exec(&multipass.ExecReq{Name: haproxy.Name, Script: downloadCmd})
+	if runDownloadCmd != nil {
+		log.Fatal(runDownloadCmd)
+	}
+	configureHAProxyCmd := fmt.Sprintf("\"chmod +x /tmp/%v && /tmp/%v\"", setupHAProxyScript, setupHAProxyScript)
+	runconfigureHAProxyCmd := multipass.Exec(&multipass.ExecReq{Name: haproxy.Name, Script: configureHAProxyCmd})
+	if runconfigureHAProxyCmd != nil {
+		log.Fatal(runconfigureHAProxyCmd)
+	}
+	fmt.Println("Deployed HAproxy!")
+
+	return haproxy
+}
+
+/*
+func ConfigureControlPlaneHA(instances []*multipass.Instance) {
+
+
+}
+*/
 // ConfigureWorkerNodes takes the list of worker instances structs from FilterNodes. It transfers the join-command script from the local machine to the worker node and runs it.
 func ConfigureWorkerNodes(instances []*multipass.Instance) {
 	for _, instance := range instances {

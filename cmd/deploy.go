@@ -37,11 +37,17 @@ var deployCmd = &cobra.Command{
 			log.Fatal("Cannot have more than 4 local nodes.")
 		}
 		deployedInstances := k8s.DeployClusterVMs(controlNodes, workerNodes)
-		k8s.CreateHostnamesFile(deployedInstances)
 		k8s.DownloadAndRunBootstrapScripts(deployedInstances)
 		controllerInstances := k8s.FilterNodes(deployedInstances, "controller")
-		k8s.ConfigureControlPlane(controllerInstances)
 		workerInstances := k8s.FilterNodes(deployedInstances, "worker")
+		if controlNodes == 1 {
+			k8s.CreateHostnamesFile(deployedInstances)
+			k8s.ConfigureControlPlane(controllerInstances)
+		} else {
+			haproxy := k8s.DeployHAProxy(deployedInstances)
+			k8s.CreateHostnamesFile(append(deployedInstances, haproxy))
+			//k8s.ConfigureControlPlaneHA(controllerInstances)
+		}
 		k8s.ConfigureWorkerNodes(workerInstances)
 		k8s.ConfigurePostDeploy(controllerInstances)
 	},

@@ -6,7 +6,7 @@ import (
 )
 
 func TestLaunch(t *testing.T) {
-	launchReq := NewLaunchReq("10G", "1G", "1", "test")
+	launchReq := NewLaunchReq("10G", "1G", "1", "testLaunch")
 	instance, err := Launch(launchReq)
 
 	defer func() {
@@ -19,10 +19,22 @@ func TestLaunch(t *testing.T) {
 	}()
 
 	if err != nil {
-		t.Errorf("Multipass Launch errored with %v", err)
+		t.Errorf("multipass.Launch errored with %v", err)
 	}
 
-	if instance.Name != "test" {
+	if instance.Name != "testLaunch" {
 		t.Error("The instance launched with the wrong name.")
+	}
+}
+
+func TestDelete(t *testing.T) {
+	cmd := exec.Command("multipass", "launch", "--name", "testDelete")
+	if err := cmd.Run(); err != nil {
+		t.Error("Failed to launch instance")
+	}
+
+	err := Delete(&DeleteReq{Name: "testDelete"})
+	if err != nil {
+		t.Error("Failed to delete instance!")
 	}
 }

@@ -44,9 +44,9 @@ var deployCmd = &cobra.Command{
 			k8s.CreateHostnamesFile(deployedInstances)
 			k8s.ConfigureControlPlane(controllerInstances)
 		} else {
-			haproxy := k8s.DeployHAProxy(deployedInstances)
+			haproxy := k8s.DeployHAProxy(controllerInstances)
 			k8s.CreateHostnamesFile(append(deployedInstances, haproxy))
-			//k8s.ConfigureControlPlaneHA(controllerInstances)
+			k8s.ConfigureControlPlaneHA(controllerInstances)
 		}
 		k8s.ConfigureWorkerNodes(workerInstances)
 		k8s.ConfigurePostDeploy(controllerInstances)

@@ -4,7 +4,11 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"os/exec"
+	"strings"
 
 	"github.com/andrei-don/multi-k8s/k8s"
 	"github.com/andrei-don/multi-k8s/multipass"
@@ -23,6 +27,26 @@ var destroyCmd = &cobra.Command{
 			return
 		}
 		k8s.DeleteClusterVMs(k8s.GetCurrentNodes(k8s.FilterNodesListCmd(multipassList)))
+		fmt.Print("Removing the contents of the dhcpd_leases file (requires sudo)... DO NOT PROCEED if you have other VMs running on your local apart from the kubernetes ones! (y/n)? ")
+		reader := bufio.NewReader(os.Stdin)
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			fmt.Println("Error reading input:", err)
+			return
+		}
+
+		input = strings.TrimSpace(input)
+
+		if input == "y" {
+			cmd := exec.Command("sudo", "truncate", "-s", "0", "/var/db/dhcpd_leases")
+			_, err := cmd.CombinedOutput()
+			if err != nil {
+				fmt.Printf("Error executing command: %v\n", err)
+				return
+			}
+		} else {
+			fmt.Print("dhcpd_leases file was not modified")
+		}
 	},
 }
 

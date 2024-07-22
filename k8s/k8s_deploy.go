@@ -3,7 +3,9 @@ package k8s
 import (
 	"fmt"
 	"log"
+	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/andrei-don/multi-k8s/multipass"
 )
@@ -36,32 +38,56 @@ func transferCommand(req *multipass.TransferReq) {
 	}
 }
 
+func AnimateDots(done chan bool, prompt string) {
+	go func() {
+		dots := ""
+		for {
+			select {
+			case <-done:
+				return
+			default:
+				fmt.Printf("\r%s%s   ", prompt, dots)
+				time.Sleep(500 * time.Millisecond)
+				dots += "."
+				if len(dots) > 3 {
+					fmt.Printf("\r%s", prompt)
+					dots = ""
+				}
+			}
+		}
+	}()
+}
+
 // DeployClusterVMs deploys the VMs needed for the controller/worker nodes. It takes the input from the 'multi-k8s deploy' flags.
 func DeployClusterVMs(controlNodes int, workerNodes int) []*multipass.Instance {
-	fmt.Printf("Deploying Kubernetes cluster with %d control node(s) and %d worker node(s)...\n", controlNodes, workerNodes)
+	fmt.Printf("\nDeploying Kubernetes cluster with %d control node(s) and %d worker node(s)...\n", controlNodes, workerNodes)
 
 	var instances []*multipass.Instance
 
 	for i := 1; i <= controlNodes; i++ {
 		nodeName := fmt.Sprintf("controller-node-%d", i)
-		fmt.Printf("Deploying node %v\n", nodeName)
+		done := make(chan bool)
+		AnimateDots(done, fmt.Sprintf("Deploying node %v", nodeName))
 		launchReq := multipass.NewLaunchReq("50G", "2G", "2", nodeName)
 		instance, err := multipass.Launch(launchReq)
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("The IP address of %v is %v\n", nodeName, instance.IPv4)
+		close(done)
+		fmt.Printf("\nThe IP address of %v is %v\n", nodeName, instance.IPv4)
 		instances = append(instances, instance)
 	}
 	for i := 1; i <= workerNodes; i++ {
 		nodeName := fmt.Sprintf("worker-node-%d", i)
-		fmt.Printf("Deploying node %v\n", nodeName)
+		done := make(chan bool)
+		AnimateDots(done, fmt.Sprintf("Deploying node %v", nodeName))
 		launchReq := multipass.NewLaunchReq("50G", "2G", "2", nodeName)
 		instance, err := multipass.Launch(launchReq)
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("The IP address of %v is %v\n", nodeName, instance.IPv4)
+		close(done)
+		fmt.Printf("\nThe IP address of %v is %v\n", nodeName, instance.IPv4)
 		instances = append(instances, instance)
 	}
 
@@ -75,6 +101,7 @@ func CreateHostnamesFile(instances []*multipass.Instance) {
 		hostnameEntry := fmt.Sprintf("%v %v\n", instance.IPv4, instance.Name)
 		hostnameEntries = hostnameEntries + hostnameEntry
 	}
+	fmt.Printf("\n")
 	//We use escape characters for the double quotes because we would like the shell command to be enclosed in double quotes
 	createHostnamesFileCmd := fmt.Sprintf("\"echo '%s' | sudo tee -a /etc/hosts\"", hostnameEntries)
 	for _, instance := range instances {
@@ -99,12 +126,14 @@ func DownloadAndRunBootstrapScripts(instances []*multipass.Instance) {
 		for _, command := range downloadCommands {
 			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
-		fmt.Printf("Downloaded bootstrap scripts for %v\n", instance.Name)
+		fmt.Printf("\nDownloaded bootstrap scripts for %v\n", instance.Name)
 
+		done := make(chan bool)
+		AnimateDots(done, fmt.Sprintf("Running bootstrap scripts for %v", instance.Name))
 		for _, command := range runCommands {
 			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
-		fmt.Printf("Ran bootstrap scripts for %v\n", instance.Name)
+		close(done)
 	}
 }
 
@@ -128,23 +157,27 @@ func ConfigureControlPlane(instances []*multipass.Instance) {
 		downloadCommand := fmt.Sprintf("\"wget -O /tmp/%v %v/k8s/%v\"", script, BootstrapRepoRaw, script)
 		downloadCommands = append(downloadCommands, downloadCommand)
 	}
-
+	fmt.Printf("\n")
 	for _, instance := range instances {
+		done := make(chan bool)
+		AnimateDots(done, fmt.Sprintf("Running configuration script for %v", instance.Name))
 		for _, command := range downloadCommands {
 			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 		command := fmt.Sprintf("\"chmod +x /tmp/%v && /tmp/%v\"", controllerConfigScript, controllerConfigScript)
 		execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
-		fmt.Printf("Ran configuration script for %v\n", instance.Name)
+		close(done)
 
 		transferFiles := fmt.Sprintf("%v:/tmp/join-command-worker.sh /tmp/join-command-worker.sh", instance.Name)
 		transferCommand(&multipass.TransferReq{Files: transferFiles})
-		fmt.Printf("Copied join script from %v to your local machine\n", instance.Name)
+		fmt.Printf("\nCopied join script from %v to your local machine\n", instance.Name)
 	}
 }
 
 func DeployHAProxy(instances []*multipass.Instance) *multipass.Instance {
 	var ipList string
+	done := make(chan bool)
+	AnimateDots(done, "Running configuration script for haproxy")
 	launchReqHAProxy := multipass.NewLaunchReq("25G", "1G", "1", "haproxy")
 	haproxy, err := multipass.Launch(launchReqHAProxy)
 	if err != nil {
@@ -165,8 +198,8 @@ func DeployHAProxy(instances []*multipass.Instance) *multipass.Instance {
 	configureHAProxyCmd := fmt.Sprintf("\"chmod +x /tmp/%v && /tmp/%v\"", setupHAProxyScript, setupHAProxyScript)
 	execCommand(&multipass.ExecReq{Name: haproxy.Name, Script: configureHAProxyCmd})
 
-	fmt.Println("Deployed HAproxy!")
-
+	close(done)
+	fmt.Println("\nDeployed HAproxy!")
 	return haproxy
 }
 
@@ -180,12 +213,14 @@ func ConfigureControlPlaneHA(instances []*multipass.Instance) {
 
 	//Configuring first control node
 	for _, instance := range instances[:1] {
+		done := make(chan bool)
+		AnimateDots(done, fmt.Sprintf("Running configuration script for %v", instance.Name))
 		for _, command := range downloadCommands[:2] {
 			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 		command := fmt.Sprintf("\"chmod +x /tmp/%v && /tmp/%v\"", setupHAControllerScripts[1], setupHAControllerScripts[1])
 		execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
-		fmt.Printf("Ran configuration script for %v\n", instance.Name)
+		close(done)
 
 		//We need to change permissions so that we can transfer the certificates
 		var commandChmod []string
@@ -205,7 +240,7 @@ func ConfigureControlPlaneHA(instances []*multipass.Instance) {
 		for _, transferFile := range transferFiles {
 			transferCommand(&multipass.TransferReq{Files: transferFile})
 		}
-		fmt.Printf("%v finished provisioning!\n", instance.Name)
+		fmt.Printf("\n%v finished provisioning!\n", instance.Name)
 
 		//Reverting permissions
 		var commandChmodRevert []string
@@ -219,6 +254,8 @@ func ConfigureControlPlaneHA(instances []*multipass.Instance) {
 
 	//Configuring secondary control nodes
 	for _, instance := range instances[1:] {
+		done := make(chan bool)
+		AnimateDots(done, fmt.Sprintf("Running configuration script for %v", instance.Name))
 		for _, command := range downloadCommands[2:] {
 			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
@@ -250,8 +287,6 @@ func ConfigureControlPlaneHA(instances []*multipass.Instance) {
 			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 
-		fmt.Printf("Transferred the pki, admin config and join script to %v!\n", instance.Name)
-
 		var execCommands []string
 		execCommands = append(execCommands, "\"chmod +x /tmp/copy-secondary-controlplane-pki.sh && sudo /tmp/copy-secondary-controlplane-pki.sh\"")
 		execCommands = append(execCommands, "\"sudo /tmp/join-command-controller.sh\"")
@@ -261,6 +296,7 @@ func ConfigureControlPlaneHA(instances []*multipass.Instance) {
 			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 
+		close(done)
 		fmt.Printf("%v finished provisioning!\n", instance.Name)
 	}
 }
@@ -270,7 +306,7 @@ func ConfigureWorkerNodes(instances []*multipass.Instance) {
 	for _, instance := range instances {
 		transferFiles := fmt.Sprintf("/tmp/join-command-worker.sh %v:/tmp/join-command-worker.sh", instance.Name)
 		transferCommand(&multipass.TransferReq{Files: transferFiles})
-		fmt.Printf("Copied join script from your local machine to worker node %v\n", instance.Name)
+		fmt.Printf("\nCopied join script from your local machine to %v\n", instance.Name)
 
 		commandJoin := "\"chmod +x /tmp/join-command-worker.sh && sudo /tmp/join-command-worker.sh\""
 		execCommand(&multipass.ExecReq{Name: instance.Name, Script: commandJoin})
@@ -299,4 +335,24 @@ func ConfigurePostDeploy(instances []*multipass.Instance) {
 		}
 		fmt.Printf("Added kubectl autocomplete and kubectl related aliases to %v\n", instance.Name)
 	}
+}
+
+func PostDeployCleanup() {
+	cmdRemovePKI := exec.Command("rm", "-rf", "/tmp/pki")
+	if err := cmdRemovePKI.Run(); err != nil {
+		fmt.Printf("Command failed with %v!", err)
+	}
+	cmdRemoveAdminConf := exec.Command("rm", "-rf", "/tmp/admin.conf")
+	if err := cmdRemoveAdminConf.Run(); err != nil {
+		fmt.Printf("Command failed with %v!", err)
+	}
+	cmdRemoveJoinWorker := exec.Command("rm", "-rf", "/tmp/join-command-worker.sh")
+	if err := cmdRemoveJoinWorker.Run(); err != nil {
+		fmt.Printf("Command failed with %v!", err)
+	}
+	cmdRemoveJoinController := exec.Command("rm", "-rf", "/tmp/join-command-controller.sh")
+	if err := cmdRemoveJoinController.Run(); err != nil {
+		fmt.Printf("Command failed with %v!", err)
+	}
+	fmt.Println("Cleaned up local files!")
 }

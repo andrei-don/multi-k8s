@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/andrei-don/multi-k8s/k8s"
 	"github.com/andrei-don/multi-k8s/multipass"
@@ -26,8 +27,14 @@ var destroyCmd = &cobra.Command{
 			fmt.Println("Error listing multipass nodes:", err)
 			return
 		}
-		k8s.DeleteClusterVMs(k8s.GetCurrentNodes(k8s.FilterNodesListCmd(multipassList)))
-		fmt.Print("Removing the contents of the dhcpd_leases file (requires sudo)... DO NOT PROCEED if you have other VMs running on your local apart from the kubernetes ones! (y/n)? ")
+		nodesList := k8s.FilterNodesListCmd(multipassList)
+		if nodesList == "" {
+			fmt.Println("There are no cluster nodes!")
+		}
+		k8s.DeleteClusterVMs(k8s.GetCurrentNodes(nodesList))
+		time.Sleep(2 * time.Second)
+		fmt.Println()
+		fmt.Println("Removing the contents of the dhcpd_leases file (requires sudo)... DO NOT PROCEED if you have other VMs running on your local apart from the kubernetes ones! (y/n)? ")
 		reader := bufio.NewReader(os.Stdin)
 		input, err := reader.ReadString('\n')
 		if err != nil {
@@ -45,7 +52,7 @@ var destroyCmd = &cobra.Command{
 				return
 			}
 		} else {
-			fmt.Print("dhcpd_leases file was not modified")
+			fmt.Println("dhcpd_leases file was not modified")
 		}
 	},
 }

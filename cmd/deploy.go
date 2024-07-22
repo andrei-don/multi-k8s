@@ -4,9 +4,14 @@ Copyright © 2024 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"bufio"
+	"fmt"
 	"log"
+	"os"
+	"strings"
 
 	"github.com/andrei-don/multi-k8s/k8s"
+	"github.com/andrei-don/multi-k8s/multipass"
 	"github.com/spf13/cobra"
 )
 
@@ -36,6 +41,28 @@ var deployCmd = &cobra.Command{
 		if workerNodes+controlNodes > 4 {
 			log.Fatal("Cannot have more than 4 local nodes.")
 		}
+		multipassList, err := multipass.List()
+		if err != nil {
+			fmt.Println("Error listing multipass nodes:", err)
+			return
+		}
+		if k8s.FilterNodesListCmd(multipassList) != "" {
+			fmt.Println("There are is cluster currently running! Delete the nodes and deploy a new cluster?(y/n)")
+			reader := bufio.NewReader(os.Stdin)
+			input, err := reader.ReadString('\n')
+			if err != nil {
+				fmt.Println("Error reading input:", err)
+				return
+			}
+			input = strings.TrimSpace(input)
+
+			if input == "y" {
+				k8s.DeleteClusterVMs(k8s.GetCurrentNodes(k8s.FilterNodesListCmd(multipassList)))
+			} else {
+				fmt.Println("Did not delete current cluster. Delete it if you want to deploy a new one.")
+				os.Exit(0)
+			}
+		}
 		deployedInstances := k8s.DeployClusterVMs(controlNodes, workerNodes)
 		k8s.DownloadAndRunBootstrapScripts(deployedInstances)
 		controllerInstances := k8s.FilterNodes(deployedInstances, "controller")
@@ -50,6 +77,7 @@ var deployCmd = &cobra.Command{
 		}
 		k8s.ConfigureWorkerNodes(workerInstances)
 		k8s.ConfigurePostDeploy(controllerInstances)
+		k8s.PostDeployCleanup()
 	},
 }
 

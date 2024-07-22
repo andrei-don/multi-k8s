@@ -22,8 +22,11 @@ var workerNodes int
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
-	Short: "Command for deploying a cluster. Run multi-k8s deploy -h for further details",
-	Long: `Deploy a k8s cluster with specified number of control nodes and worker nodes.
+	Short: "Command for deploying a cluster.",
+	Long: `
+	Deploy a k8s cluster with specified number of control nodes and worker nodes.
+
+	You can deploy maximum 4 nodes.
 	
 	You can create a cluster with a single control-plane node:
 	multi-k8s deploy --control-nodes 1

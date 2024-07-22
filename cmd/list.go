@@ -14,7 +14,7 @@ import (
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "Command to list the nodes of your cluster.",
+	Short: "Command for listing nodes of your cluster.",
 	Long:  `Use this command to list the nodes from your cluster.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		multipassList, err := multipass.List()

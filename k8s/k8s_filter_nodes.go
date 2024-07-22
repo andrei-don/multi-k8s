@@ -19,7 +19,8 @@ func FilterNodesListCmd(multipassListOutput string) string {
 		}
 	}
 
-	if len(result) == 0 {
+	//This result has already one string corresponding to the multipass default header, therefore a length of 1 corresponds to no deployed nodes.
+	if len(result) == 1 {
 		return ""
 	}
 

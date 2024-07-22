@@ -50,7 +50,7 @@ var deployCmd = &cobra.Command{
 			return
 		}
 		if k8s.FilterNodesListCmd(multipassList) != "" {
-			fmt.Println("There are is cluster currently running! Delete the nodes and deploy a new cluster?(y/n)")
+			fmt.Println("There is a cluster currently running! Delete the nodes and deploy a new cluster?(y/n)")
 			reader := bufio.NewReader(os.Stdin)
 			input, err := reader.ReadString('\n')
 			if err != nil {

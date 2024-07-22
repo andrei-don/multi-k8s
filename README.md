@@ -10,6 +10,8 @@ Make sure to:
 - have Go installed on your Mac (https://go.dev/doc/install)
 - have latest Multipass version installed on your Mac (https://multipass.run/docs/install-multipass)
 
+### Installation
+
 Install it using the commands below:
 
 ```
@@ -21,4 +23,10 @@ export PATH=$PATH:$(go env GOPATH)/bin
 
 # Verify the installation
 multi-k8s --help
+```
+
+You can enable autocomplete by adding the autocomplete script to your shell of choice. Example below for zsh:
+```
+echo "source <(multi-k8s completion zsh)" | tee -a ~/.zshrc
+source ~/.zshrc
 ```

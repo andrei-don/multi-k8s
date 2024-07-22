@@ -22,7 +22,11 @@ var listCmd = &cobra.Command{
 			fmt.Println("Error listing multipass nodes:", err)
 			return
 		}
-		fmt.Println(k8s.FilterNodesListCmd(multipassList))
+		if k8s.FilterNodesListCmd(multipassList) == "" {
+			fmt.Println("You have no multi-k8s clusters!")
+		} else {
+			fmt.Println(k8s.FilterNodesListCmd(multipassList))
+		}
 	},
 }
 

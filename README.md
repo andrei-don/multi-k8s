@@ -2,7 +2,9 @@
 
 ![Alt text](multi-k8s.png)
 
-multi-k8s is a go cli which uses multipass to deploy k8s clusters on your macos.
+multi-k8s is a Go CLI which uses Multipass to deploy k8s clusters on your MacOS. It uses a suite of shell scripts hosted in https://github.com/andrei-don/multi-k8s-provisioning-scripts together with kubeadm to provision single/highly available control-plane clusters.
+
+The CLI is based on the Cobra framework (https://cobra.dev/).
 
 ### Pre-requisites
 

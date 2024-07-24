@@ -19,8 +19,8 @@ import (
 // destroyCmd represents the destroy command
 var destroyCmd = &cobra.Command{
 	Use:   "destroy",
-	Short: "Command for destroying a cluster.",
-	Long:  `Run this command to destroy your multi-k8s cluster`,
+	Short: "Command for destroying a cluster",
+	Long:  `Run this command to destroy your multi-k8s cluster.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		multipassList, err := multipass.List()
 		if err != nil {

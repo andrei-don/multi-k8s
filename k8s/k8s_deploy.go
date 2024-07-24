@@ -3,7 +3,9 @@ package k8s
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -24,10 +26,21 @@ var setupHAProxyScript string = "setup-haproxy.sh"
 
 var setupPostDeploymentScripts = []string{"common-tasks-controlplane.sh", "approve-worker-csr.sh"}
 
-func execCommand(req *multipass.ExecReq) {
+func execCommandMultipass(req *multipass.ExecReq) {
 	cmd := multipass.Exec(req)
 	if cmd != nil {
 		log.Fatal(cmd)
+	}
+}
+
+func execCommand(cmdArgs ...string) {
+	if len(cmdArgs) == 0 {
+		fmt.Println("No arguments were provided.")
+		return
+	}
+	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("Command failed with %v!\n", err)
 	}
 }
 
@@ -46,7 +59,7 @@ func AnimateDots(done chan bool, prompt string) {
 			case <-done:
 				return
 			default:
-				fmt.Printf("\r%s%s   ", prompt, dots)
+				fmt.Printf("\r%s%s         ", prompt, dots)
 				time.Sleep(500 * time.Millisecond)
 				dots += "."
 				if len(dots) > 3 {
@@ -105,7 +118,7 @@ func CreateHostnamesFile(instances []*multipass.Instance) {
 	//We use escape characters for the double quotes because we would like the shell command to be enclosed in double quotes
 	createHostnamesFileCmd := fmt.Sprintf("\"echo '%s' | sudo tee -a /etc/hosts\"", hostnameEntries)
 	for _, instance := range instances {
-		execCommand(&multipass.ExecReq{Name: instance.Name, Script: createHostnamesFileCmd})
+		execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: createHostnamesFileCmd})
 		fmt.Printf("Added hostnames for %v\n", instance.Name)
 	}
 }
@@ -124,14 +137,14 @@ func DownloadAndRunBootstrapScripts(instances []*multipass.Instance) {
 	for _, instance := range instances {
 
 		for _, command := range downloadCommands {
-			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
+			execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 		fmt.Printf("\nDownloaded bootstrap scripts for %v\n", instance.Name)
 
 		done := make(chan bool)
 		AnimateDots(done, fmt.Sprintf("Running bootstrap scripts for %v", instance.Name))
 		for _, command := range runCommands {
-			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
+			execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 		close(done)
 	}
@@ -162,10 +175,10 @@ func ConfigureControlPlane(instances []*multipass.Instance) {
 		done := make(chan bool)
 		AnimateDots(done, fmt.Sprintf("Running configuration script for %v", instance.Name))
 		for _, command := range downloadCommands {
-			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
+			execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 		command := fmt.Sprintf("\"chmod +x /tmp/%v && /tmp/%v\"", controllerConfigScript, controllerConfigScript)
-		execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
+		execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: command})
 		close(done)
 
 		transferFiles := fmt.Sprintf("%v:/tmp/join-command-worker.sh /tmp/join-command-worker.sh", instance.Name)
@@ -190,13 +203,13 @@ func DeployHAProxy(instances []*multipass.Instance) *multipass.Instance {
 	}
 	ipList = ipList + haproxyIp
 	createIPListCmd := fmt.Sprintf("\"echo '%s' | sudo tee -a -i /tmp/ip_list\"", ipList)
-	execCommand(&multipass.ExecReq{Name: haproxy.Name, Script: createIPListCmd})
+	execCommandMultipass(&multipass.ExecReq{Name: haproxy.Name, Script: createIPListCmd})
 
 	downloadCmd := fmt.Sprintf("\"wget -O /tmp/%v %v/%v\"", setupHAProxyScript, BootstrapRepoRaw, setupHAProxyScript)
-	execCommand(&multipass.ExecReq{Name: haproxy.Name, Script: downloadCmd})
+	execCommandMultipass(&multipass.ExecReq{Name: haproxy.Name, Script: downloadCmd})
 
 	configureHAProxyCmd := fmt.Sprintf("\"chmod +x /tmp/%v && /tmp/%v\"", setupHAProxyScript, setupHAProxyScript)
-	execCommand(&multipass.ExecReq{Name: haproxy.Name, Script: configureHAProxyCmd})
+	execCommandMultipass(&multipass.ExecReq{Name: haproxy.Name, Script: configureHAProxyCmd})
 
 	close(done)
 	fmt.Println("\nDeployed HAproxy!")
@@ -216,10 +229,10 @@ func ConfigureControlPlaneHA(instances []*multipass.Instance) {
 		done := make(chan bool)
 		AnimateDots(done, fmt.Sprintf("Running configuration script for %v", instance.Name))
 		for _, command := range downloadCommands[:2] {
-			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
+			execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 		command := fmt.Sprintf("\"chmod +x /tmp/%v && /tmp/%v\"", setupHAControllerScripts[1], setupHAControllerScripts[1])
-		execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
+		execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: command})
 		close(done)
 
 		//We need to change permissions so that we can transfer the certificates
@@ -228,7 +241,7 @@ func ConfigureControlPlaneHA(instances []*multipass.Instance) {
 		commandChmod = append(commandChmod, "\"sudo chmod 644 /home/ubuntu/pki/*.pub\"")
 		commandChmod = append(commandChmod, "\"sudo chmod 644 /home/ubuntu/pki/etcd/*.key\"")
 		for _, command := range commandChmod {
-			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
+			execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 
 		var transferFiles []string
@@ -248,7 +261,7 @@ func ConfigureControlPlaneHA(instances []*multipass.Instance) {
 		commandChmodRevert = append(commandChmodRevert, "\"sudo chmod 600 /home/ubuntu/pki/*.pub\"")
 		commandChmodRevert = append(commandChmodRevert, "\"sudo chmod 600 /home/ubuntu/pki/etcd/*.key\"")
 		for _, command := range commandChmodRevert {
-			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
+			execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 	}
 
@@ -257,10 +270,10 @@ func ConfigureControlPlaneHA(instances []*multipass.Instance) {
 		done := make(chan bool)
 		AnimateDots(done, fmt.Sprintf("Running configuration script for %v", instance.Name))
 		for _, command := range downloadCommands[2:] {
-			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
+			execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 		commandEtcd := "\"sudo mkdir /home/ubuntu/etcd && sudo chown -R ubuntu:ubuntu /home/ubuntu/etcd\""
-		execCommand(&multipass.ExecReq{Name: instance.Name, Script: commandEtcd})
+		execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: commandEtcd})
 
 		var transferFiles []string
 		transferFiles = append(transferFiles, fmt.Sprintf("/tmp/admin.conf %v:/home/ubuntu", instance.Name))
@@ -284,7 +297,7 @@ func ConfigureControlPlaneHA(instances []*multipass.Instance) {
 		commandChmodRevert = append(commandChmodRevert, "\"sudo chmod 600 /home/ubuntu/*.pub\"")
 		commandChmodRevert = append(commandChmodRevert, "\"sudo chmod 600 /home/ubuntu/etcd/*.key\"")
 		for _, command := range commandChmodRevert {
-			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
+			execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 
 		var execCommands []string
@@ -293,11 +306,11 @@ func ConfigureControlPlaneHA(instances []*multipass.Instance) {
 		execCommands = append(execCommands, "\"chmod +x /tmp/setup-secondary-controlplanes.sh && /tmp/setup-secondary-controlplanes.sh\"")
 
 		for _, command := range execCommands {
-			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
+			execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 
 		close(done)
-		fmt.Printf("%v finished provisioning!\n", instance.Name)
+		fmt.Printf("\n%v finished provisioning!\n", instance.Name)
 	}
 }
 
@@ -309,7 +322,7 @@ func ConfigureWorkerNodes(instances []*multipass.Instance) {
 		fmt.Printf("\nCopied join script from your local machine to %v\n", instance.Name)
 
 		commandJoin := "\"chmod +x /tmp/join-command-worker.sh && sudo /tmp/join-command-worker.sh\""
-		execCommand(&multipass.ExecReq{Name: instance.Name, Script: commandJoin})
+		execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: commandJoin})
 		fmt.Printf("Joined %v to cluster\n", instance.Name)
 	}
 }
@@ -327,32 +340,61 @@ func ConfigurePostDeploy(instances []*multipass.Instance) {
 
 	for _, instance := range instances {
 		for _, command := range downloadCommands {
-			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
+			execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 
 		for _, command := range runCommands {
-			execCommand(&multipass.ExecReq{Name: instance.Name, Script: command})
+			execCommandMultipass(&multipass.ExecReq{Name: instance.Name, Script: command})
 		}
 		fmt.Printf("Added kubectl autocomplete and kubectl related aliases to %v\n", instance.Name)
 	}
 }
 
+// CreateLocalAdmin generates a CSR for cluster access from the local laptop and approves it
+func CreateLocalAdmin(isHighlyAvailable int) {
+	approveLocalAdminScript := "approve-local-admin-csr.sh"
+	execCommand("sh", "-c", "openssl genrsa -out /tmp/local-admin.key 2048")
+	execCommand("sh", "-c", "openssl req -new -key /tmp/local-admin.key -subj '/CN=local-admin/' -out /tmp/local-admin.csr")
+	transferCommand(&multipass.TransferReq{Files: "/tmp/local-admin.csr controller-node-1:/tmp/"})
+	transferCommand(&multipass.TransferReq{Files: "/tmp/local-admin.key controller-node-1:/tmp/"})
+	execCommand("sh", "-c", "rm /tmp/local-admin*")
+	execCommandMultipass(&multipass.ExecReq{Name: "controller-node-1", Script: fmt.Sprintf("\"wget -O /tmp/%v %v/%v\"", approveLocalAdminScript, BootstrapRepoRaw, approveLocalAdminScript)})
+	execCommandMultipass(&multipass.ExecReq{Name: "controller-node-1", Script: fmt.Sprintf("\"chmod +x /tmp/%v && /tmp/%v %v\"", approveLocalAdminScript, approveLocalAdminScript, isHighlyAvailable)})
+
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Printf("Error getting home directory: %v\n", err)
+		return
+	}
+
+	kubeDir := filepath.Join(homeDir, ".kube")
+	kubeConfigFile := filepath.Join(kubeDir, "config")
+	if _, err := os.Stat(kubeDir); os.IsNotExist(err) {
+		fmt.Println("The .kube directory will be created locally")
+		err := os.Mkdir(kubeDir, 0755)
+		if err != nil {
+			fmt.Printf("Error creating directory %v\n", err)
+			return
+		}
+		transferCommand(&multipass.TransferReq{Files: "controller-node-1:/tmp/config ~/.kube/"})
+	} else if _, err := os.Stat(kubeConfigFile); os.IsNotExist(err) {
+		fmt.Println("The .kube/config file will be created locally")
+		transferCommand(&multipass.TransferReq{Files: "controller-node-1:/tmp/config ~/.kube/"})
+	} else {
+		fmt.Println("The kubeconfig file exists, replacing contents...")
+		err := os.Truncate(kubeConfigFile, 0)
+		if err != nil {
+			fmt.Printf("Error truncating the file: %v", err)
+			return
+		}
+		transferCommand(&multipass.TransferReq{Files: "controller-node-1:/tmp/config ~/.kube/"})
+	}
+	os.Chmod(kubeConfigFile, 0600)
+	execCommandMultipass(&multipass.ExecReq{Name: "controller-node-1", Script: "\"rm -rf /tmp/local-* /tmp/config \""})
+}
+
+// PostDeployCleanup removes the temp files created during the bootstrap process
 func PostDeployCleanup() {
-	cmdRemovePKI := exec.Command("rm", "-rf", "/tmp/pki")
-	if err := cmdRemovePKI.Run(); err != nil {
-		fmt.Printf("Command failed with %v!", err)
-	}
-	cmdRemoveAdminConf := exec.Command("rm", "-rf", "/tmp/admin.conf")
-	if err := cmdRemoveAdminConf.Run(); err != nil {
-		fmt.Printf("Command failed with %v!", err)
-	}
-	cmdRemoveJoinWorker := exec.Command("rm", "-rf", "/tmp/join-command-worker.sh")
-	if err := cmdRemoveJoinWorker.Run(); err != nil {
-		fmt.Printf("Command failed with %v!", err)
-	}
-	cmdRemoveJoinController := exec.Command("rm", "-rf", "/tmp/join-command-controller.sh")
-	if err := cmdRemoveJoinController.Run(); err != nil {
-		fmt.Printf("Command failed with %v!", err)
-	}
+	execCommand("rm", "-rf", "/tmp/pki /tmp/admin.conf /tmp/join-command-worker.sh /tmp/join-command-controller.sh")
 	fmt.Println("Cleaned up local files!")
 }

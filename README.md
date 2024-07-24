@@ -32,3 +32,13 @@ You can enable autocomplete by adding the autocomplete script to your shell of c
 echo "source <(multi-k8s completion zsh)" | tee -a ~/.zshrc
 source ~/.zshrc
 ```
+
+### How to use
+
+During the bootstrap process, you will be asked if you would like the CLI to create/replace your kubeconfig file. If you agree to it, you will have cluster admin access from your local machine and can interact with the cluster straightaway. You will need to have kubectl installed.
+
+If you do not want the CLI to change your kubeconfig file in case you already have one, you can shell into the controller node and run your kubectl commands from there:
+
+```
+$ multipass shell controller-node-1
+```

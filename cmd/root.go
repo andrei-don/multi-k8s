@@ -12,7 +12,7 @@ import (
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "multi-k8s",
-	Short: "Flexible k8s bootstrap tool.",
+	Short: "Flexible k8s bootstrap tool",
 	Long: `
 multi-k8s is a CLI tool which deploys single/multi-node k8s clusters. 
 

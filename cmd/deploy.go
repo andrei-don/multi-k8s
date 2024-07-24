@@ -19,10 +19,21 @@ import (
 var controlNodes int
 var workerNodes int
 
+func readInput() string {
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Println("Error reading input:", err)
+		return ""
+	}
+	input = strings.TrimSpace(input)
+	return input
+}
+
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
-	Short: "Command for deploying a cluster.",
+	Short: "Command for deploying a cluster",
 	Long: `
 	Deploy a k8s cluster with specified number of control nodes and worker nodes.
 
@@ -51,14 +62,7 @@ var deployCmd = &cobra.Command{
 		}
 		if k8s.FilterNodesListCmd(multipassList) != "" {
 			fmt.Println("There is a cluster currently running! Delete the nodes and deploy a new cluster?(y/n)")
-			reader := bufio.NewReader(os.Stdin)
-			input, err := reader.ReadString('\n')
-			if err != nil {
-				fmt.Println("Error reading input:", err)
-				return
-			}
-			input = strings.TrimSpace(input)
-
+			input := readInput()
 			if input == "y" {
 				k8s.DeleteClusterVMs(k8s.GetCurrentNodes(k8s.FilterNodesListCmd(multipassList)))
 			} else {
@@ -73,10 +77,24 @@ var deployCmd = &cobra.Command{
 		if controlNodes == 1 {
 			k8s.CreateHostnamesFile(deployedInstances)
 			k8s.ConfigureControlPlane(controllerInstances)
+			fmt.Println("The script is about to replace the contents of your ~/.kube/config file. If you have other entries from other clusters that you still want to connect to, please do not proceed. Do you want to proceed (y/n)?")
+			input := readInput()
+			if input == "y" {
+				k8s.CreateLocalAdmin(0)
+			} else {
+				fmt.Println("Did not add a kubeconfig file. Please shell into the controller node to get access to your cluster.")
+			}
 		} else {
 			haproxy := k8s.DeployHAProxy(controllerInstances)
 			k8s.CreateHostnamesFile(append(deployedInstances, haproxy))
 			k8s.ConfigureControlPlaneHA(controllerInstances)
+			fmt.Println("The script is about to replace the contents of your ~/.kube/config file. If you have other entries from other clusters that you still want to connect to, please do not proceed. Do you want to proceed (y/n)?")
+			input := readInput()
+			if input == "y" {
+				k8s.CreateLocalAdmin(1)
+			} else {
+				fmt.Println("Did not add a kubeconfig file. Please shell into the controller node to get access to your cluster.")
+			}
 		}
 		k8s.ConfigureWorkerNodes(workerInstances)
 		k8s.ConfigurePostDeploy(controllerInstances)

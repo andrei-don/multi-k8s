@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+sudo apt-get install jq
+
 PAT_TOKEN=$1
 
 mkdir -p /home/ubuntu/actions-runner

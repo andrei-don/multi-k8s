@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-sudo apt-get install jq
+sudo apt-get install jq -y
 
 PAT_TOKEN=$1
 

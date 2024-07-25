@@ -27,3 +27,7 @@ REPO_TOKEN=$(curl -L   -X POST   -H "Accept: application/vnd.github+json"   -H "
 
 sudo ./svc.sh install
 sudo ./svc.sh start
+
+# Installing multipass on the server
+
+sudo snap install multipass

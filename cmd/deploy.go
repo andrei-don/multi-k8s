@@ -32,7 +32,7 @@ func readInput() string {
 	return input
 }
 
-func checkMultipass() {
+func CheckMultipass() {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "linux", "darwin":
@@ -65,7 +65,7 @@ var deployCmd = &cobra.Command{
 	multi-k8s deploy --control-nodes 3`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		checkMultipass()
+		CheckMultipass()
 		if controlNodes != 1 && controlNodes != 3 {
 			log.Fatal("Control nodes must be either 1 or 3.")
 		}

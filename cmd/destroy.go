@@ -22,6 +22,7 @@ var destroyCmd = &cobra.Command{
 	Short: "Command for destroying a cluster",
 	Long:  `Run this command to destroy your multi-k8s cluster.`,
 	Run: func(cmd *cobra.Command, args []string) {
+		CheckMultipass()
 		multipassList, err := multipass.List()
 		if err != nil {
 			fmt.Println("Error listing multipass nodes:", err)

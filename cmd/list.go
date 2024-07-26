@@ -17,6 +17,7 @@ var listCmd = &cobra.Command{
 	Short: "Command for listing cluster nodes",
 	Long:  `Use this command to list the nodes from your cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
+		CheckMultipass()
 		multipassList, err := multipass.List()
 		if err != nil {
 			fmt.Println("Error listing multipass nodes:", err)

@@ -14,7 +14,20 @@ Make sure to:
 
 ### Installation
 
-Install it using the commands below:
+#### Using brew
+
+```
+# Add the tap
+brew tap andrei-don/tap
+
+# Install the formula
+brew install andrei-don/tap/multi-k8s
+
+# Verify the installation
+multi-k8s --help
+```
+
+#### Using go install
 
 ```
 # Use go install to download, build, and install the binary
@@ -27,13 +40,28 @@ export PATH=$PATH:$(go env GOPATH)/bin
 multi-k8s --help
 ```
 
+#### Using the release binaries
+
+Go to the Releases section of this repo and download the latest binary for your OS (currently just ARM64 for MacOS and Linux).
+
+```
+# Make the binary executable
+chmod +x multi-k8s
+
+# Add it to a directory within your PATH.
+mv multi-k8s /usr/local/bin
+
+# Verify the installation
+multi-k8s --help
+```
+
+### How to use
+
 You can enable autocomplete by adding the autocomplete script to your shell of choice. Example below for zsh:
 ```
 echo "source <(multi-k8s completion zsh)" | tee -a ~/.zshrc
 source ~/.zshrc
 ```
-
-### How to use
 
 During the bootstrap process, you will be asked if you would like the CLI to create/replace your kubeconfig file. If you agree to it, you will have cluster admin access from your local machine and can interact with the cluster straightaway. You will need to have kubectl installed.
 

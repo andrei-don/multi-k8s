@@ -1,0 +1,21 @@
+builds:
+  - binary: multi-k8s
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - arm64
+
+brews:
+  - 
+    name: multi-k8s
+    homepage: https://github.com/andrei-don/multi-k8s
+    description: "CLI to create k8s clusters on Multipass VMs."
+    repository:
+      owner: andrei-don
+      name: homebrew-andrei-don
+      branch: main
+
+checksum:
+  name_template: 'checksums.txt'
+    

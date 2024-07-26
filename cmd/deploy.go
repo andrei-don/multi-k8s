@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/andrei-don/multi-k8s/k8s"
@@ -30,6 +32,23 @@ func readInput() string {
 	return input
 }
 
+func CheckMultipass() {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "linux", "darwin":
+		cmd = exec.Command("which", "multipass")
+	default:
+		fmt.Println("Unsupported operating system")
+		os.Exit(1)
+	}
+
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("Multipass not found, download it from https://multipass.run/docs/install-multipass#install")
+		os.Exit(1)
+	}
+}
+
 // deployCmd represents the deploy command
 var deployCmd = &cobra.Command{
 	Use:   "deploy",
@@ -46,6 +65,7 @@ var deployCmd = &cobra.Command{
 	multi-k8s deploy --control-nodes 3`,
 
 	Run: func(cmd *cobra.Command, args []string) {
+		CheckMultipass()
 		if controlNodes != 1 && controlNodes != 3 {
 			log.Fatal("Control nodes must be either 1 or 3.")
 		}

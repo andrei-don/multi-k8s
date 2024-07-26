@@ -16,6 +16,8 @@ var rootCmd = &cobra.Command{
 	Long: `
 multi-k8s is a CLI tool which deploys single/multi-node k8s clusters. 
 
+Each node has the minimum spec recommended for K8s: 2GB RAM, 2 CPUs and 50G Disk.
+
 Run the deploy command to create a cluster:
 multi-k8s deploy
 

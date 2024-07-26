@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var Version = "v0.0.2"
+var Version = "replaced_by_goreleaser"
 
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{

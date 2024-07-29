@@ -11,23 +11,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func listCommand(multipassListFunction func() (string, error), k8sFilterNodesListCmdFunction func(string) string) {
+	CheckMultipass()
+	multipassList, err := multipassListFunction()
+	if err != nil {
+		fmt.Println("Error listing multipass nodes:", err)
+		return
+	}
+	if k8sFilterNodesListCmdFunction(multipassList) == "" {
+		fmt.Println("You have no multi-k8s clusters!")
+	} else {
+		fmt.Println(k8sFilterNodesListCmdFunction(multipassList))
+	}
+}
+
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "Command for listing cluster nodes",
 	Long:  `Use this command to list the nodes from your cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
-		CheckMultipass()
-		multipassList, err := multipass.List()
-		if err != nil {
-			fmt.Println("Error listing multipass nodes:", err)
-			return
-		}
-		if k8s.FilterNodesListCmd(multipassList) == "" {
-			fmt.Println("You have no multi-k8s clusters!")
-		} else {
-			fmt.Println(k8s.FilterNodesListCmd(multipassList))
-		}
+		listCommand(multipass.List, k8s.FilterNodesListCmd)
 	},
 }
 

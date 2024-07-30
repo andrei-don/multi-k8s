@@ -31,3 +31,5 @@ sudo ./svc.sh start
 # Installing multipass on the server
 
 sudo snap install multipass
+
+sudo snap install kubectl --classic

@@ -1,0 +1,44 @@
+# .github/workflows/go-test.yaml
+name: Go Test
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+        - main
+
+permissions:
+  contents: write
+  # packages: write
+  # issues: write
+
+jobs:
+  go-ci:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Verify dependencies
+        run: go mod verify 
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Install staticcheck
+        run: go install honnef.co/go/tools/cmd/staticcheck@latest
+
+      - name: Install golint
+        run: go install golang.org/x/lint/golint@latest
+
+      - name: Run golint
+        run: golint ./...
+
+      - name: Run tests
+        run: go test -v -timeout 0 ./...
+        

@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 Alex Stan
-*/
 package cmd
 
 import (
@@ -8,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 	"time"
 
@@ -31,6 +29,10 @@ var destroyCmd = &cobra.Command{
 		nodesList := k8s.FilterNodesListCmd(multipassList)
 		if nodesList == "" {
 			fmt.Println("There are no cluster nodes!")
+		}
+		re := regexp.MustCompile(`haproxy\s+.*`)
+		if re.MatchString(multipassList) {
+			multipass.Delete(&multipass.DeleteReq{Name: "haproxy"})
 		}
 		k8s.DeleteClusterVMs(k8s.GetCurrentNodes(nodesList))
 		time.Sleep(2 * time.Second)

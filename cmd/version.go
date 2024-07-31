@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 Alex Stan
-*/
 package cmd
 
 import (
@@ -9,6 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Version is dynamically replaced with the git tag by goreleaser at build time using lflags
 var Version string
 
 // versionCmd represents the version command

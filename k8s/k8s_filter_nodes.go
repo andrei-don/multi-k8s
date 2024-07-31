@@ -11,7 +11,7 @@ func FilterNodesListCmd(multipassListOutput string) string {
 
 	var result []string
 
-	re := regexp.MustCompile(`^(haproxy|controller-node-[123]|worker-node-[123])\s+.*`)
+	re := regexp.MustCompile(`^(controller-node-[123]|worker-node-[123])\s+.*`)
 
 	for _, line := range lines {
 		if re.MatchString(line) || strings.HasPrefix(line, "Name") {

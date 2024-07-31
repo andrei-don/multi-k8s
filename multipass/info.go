@@ -5,16 +5,13 @@ import (
 	"strings"
 )
 
-const (
-	Name = "Name:"
-	IPv4 = "IPv4:"
-)
-
+// Instance structs holds the name and IPv4 IP address for the deployed instance.
 type Instance struct {
 	Name string
 	IPv4 string
 }
 
+// InfoReq has the fields needed as input for the InstanceInfo function.
 type InfoReq struct {
 	Name string
 }
@@ -23,13 +20,13 @@ type InfoReq struct {
 func instanceOutput(stdout string) *Instance {
 	var instance Instance
 	for _, line := range strings.Split(stdout, "\n") {
-		if strings.Contains(line, Name) {
+		if strings.Contains(line, "Name:") {
 			// The combination between TrimSpace and ReplaceAll is used to replace "Name:" with an empty string and to eliminate the spaces,
 			// therefore keeping only the value we are interested in
-			instance.Name = strings.TrimSpace(strings.ReplaceAll(line, Name, ""))
+			instance.Name = strings.TrimSpace(strings.ReplaceAll(line, "Name:", ""))
 		}
-		if strings.Contains(line, IPv4) {
-			instance.IPv4 = strings.TrimSpace(strings.ReplaceAll(line, IPv4, ""))
+		if strings.Contains(line, "IPv4:") {
+			instance.IPv4 = strings.TrimSpace(strings.ReplaceAll(line, "IPv4:", ""))
 		}
 
 	}

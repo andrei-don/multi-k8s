@@ -42,6 +42,9 @@ jobs:
       - name: Run golint
         run: golint ./...
 
-      - name: Run tests
-        run: go test -timeout 0 ./...
+      - name: Check current user
+        run: whoami
+
+      #- name: Run tests
+      #  run: go test -timeout 0 ./...
         

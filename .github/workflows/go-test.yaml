@@ -45,6 +45,6 @@ jobs:
       - name: Check current user
         run: whoami
 
-      #- name: Run tests
-      #  run: go test -timeout 0 ./...
+      - name: Run tests
+        run: go test -timeout 0 ./...
         

@@ -17,4 +17,10 @@ curl -L \
   -H "X-GitHub-Api-Version: 2022-11-28" \
   https://api.github.com/repos/andrei-don/multi-k8s/actions/runners/${RUNNER_ID}
 
-multipass delete -p self-hosted-runner
+cd ~/actions-runner
+./svc.sh uninstall
+
+REPO_TOKEN=$(curl -L   -X POST   -H "Accept: application/vnd.github+json"   -H "Authorization: Bearer ${PAT_TOKEN}"   -H "X-GitHub-Api-Version: 2022-11-28"   https://api.github.com/repos/andrei-don/multi-k8s/actions/runners/registration-token | jq -r '.token')
+./config.sh remove --token $REPO_TOKEN
+
+./svc.sh uninstall

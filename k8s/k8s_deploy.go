@@ -13,6 +13,7 @@ import (
 )
 
 const (
+	//BootstrapRepoRaw is the repo hosting the provisioning scripts.
 	BootstrapRepoRaw = "https://raw.githubusercontent.com/andrei-don/multi-k8s-provisioning-scripts/main"
 )
 
@@ -51,6 +52,7 @@ func transferCommand(req *multipass.TransferReq) {
 	}
 }
 
+// AnimateDots animates the dots during long running commands.
 func AnimateDots(done chan bool, prompt string) {
 	go func() {
 		dots := ""
@@ -107,7 +109,7 @@ func DeployClusterVMs(controlNodes int, workerNodes int) []*multipass.Instance {
 	return instances
 }
 
-// CreateHostnameFile takes the list of multipass.Instance structs from DeployClusterVMs and creates the hostnames file on each instance.
+// CreateHostnamesFile takes the list of multipass.Instance structs from DeployClusterVMs and creates the hostnames file on each instance.
 func CreateHostnamesFile(instances []*multipass.Instance) {
 	var hostnameEntries string
 	for _, instance := range instances {
@@ -123,7 +125,7 @@ func CreateHostnamesFile(instances []*multipass.Instance) {
 	}
 }
 
-// DownloadBootstrapScripts downloads the scripts located in the multi-k8s-provisioning-scripts repo and runs them on all nodes. It installs kubelet, kubeadm and containerd.
+// DownloadAndRunBootstrapScripts downloads the scripts located in the multi-k8s-provisioning-scripts repo and runs them on all nodes. It installs kubelet, kubeadm and containerd.
 func DownloadAndRunBootstrapScripts(instances []*multipass.Instance) {
 	var downloadCommands []string
 	var runCommands []string
@@ -187,6 +189,7 @@ func ConfigureControlPlane(instances []*multipass.Instance) {
 	}
 }
 
+// DeployHAProxy deploys the HAProxy VM and configures it to work with the controller nodes.
 func DeployHAProxy(instances []*multipass.Instance) *multipass.Instance {
 	var ipList string
 	done := make(chan bool)
@@ -196,12 +199,12 @@ func DeployHAProxy(instances []*multipass.Instance) *multipass.Instance {
 	if err != nil {
 		log.Fatal(err)
 	}
-	haproxyIp := fmt.Sprintf("%v\n", haproxy.IPv4)
+	haproxyIP := fmt.Sprintf("%v\n", haproxy.IPv4)
 	for _, instance := range instances {
 		ip := fmt.Sprintf("%v\n", instance.IPv4)
 		ipList = ipList + ip
 	}
-	ipList = ipList + haproxyIp
+	ipList = ipList + haproxyIP
 	createIPListCmd := fmt.Sprintf("\"echo '%s' | sudo tee -a -i /tmp/ip_list\"", ipList)
 	execCommandMultipass(&multipass.ExecReq{Name: haproxy.Name, Script: createIPListCmd})
 
@@ -216,6 +219,7 @@ func DeployHAProxy(instances []*multipass.Instance) *multipass.Instance {
 	return haproxy
 }
 
+// ConfigureControlPlaneHA provisions the controller nodes. It configures the first controller node and after that it transfers the join commands to the rest of the controllers and to the workers.
 func ConfigureControlPlaneHA(instances []*multipass.Instance) {
 	var downloadCommands []string
 
@@ -350,7 +354,7 @@ func ConfigurePostDeploy(instances []*multipass.Instance) {
 	}
 }
 
-// CreateLocalAdmin generates a CSR for cluster access from the local laptop and approves it
+// CreateLocalAdmin generates a CSR for cluster access from the local laptop and approves it.
 func CreateLocalAdmin(isHighlyAvailable int) {
 	approveLocalAdminScript := "approve-local-admin-csr.sh"
 	execCommand("sh", "-c", "openssl genrsa -out /tmp/local-admin.key 2048")

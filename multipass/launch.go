@@ -5,6 +5,7 @@ import (
 	"os/exec"
 )
 
+// LaunchReq has the fields needed as input for the Launch function.
 type LaunchReq struct {
 	Disk   string
 	Memory string
@@ -13,6 +14,7 @@ type LaunchReq struct {
 	Image  string
 }
 
+// NewLaunchReq adds Ubuntu Jammy as the LaunchReq image.
 func NewLaunchReq(disk, memory, cpus, name string) *LaunchReq {
 	return &LaunchReq{
 		Disk:   disk,
@@ -23,6 +25,7 @@ func NewLaunchReq(disk, memory, cpus, name string) *LaunchReq {
 	}
 }
 
+// Launch function launches a multipass VM according to the spec in the LaunchReq.
 func Launch(launchReq *LaunchReq) (*Instance, error) {
 	var args = ""
 	if launchReq.Image != "" {

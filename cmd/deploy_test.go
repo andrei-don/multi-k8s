@@ -69,8 +69,6 @@ func TestDeployCmdSingleControler(t *testing.T) {
 
 }
 
-// Leaving the multi-control plane testing for later due to insufficient local VM size. Will reduce the cluster VM specs for testing later.
-/*
 func TestDeployCmdMultiControllers(t *testing.T) {
 	_, err := runCommand(t, "which", "multipass")
 	if err != nil {
@@ -106,7 +104,7 @@ func TestDeployCmdMultiControllers(t *testing.T) {
 	time.Sleep(1 * time.Minute)
 	verifyClusterDeployment(t)
 }
-*/
+
 // verifyClusterDeployment checks if the cluster nodes are in a 'Ready' state and deploys an nginx pod, checking if it is running succesfully.
 func verifyClusterDeployment(t *testing.T) {
 	nodesOutput, err := runCommand(t, "kubectl", "get", "nodes")
@@ -116,7 +114,7 @@ func verifyClusterDeployment(t *testing.T) {
 	podsOutput, err := runCommand(t, "kubectl", "run", "test", "--image=nginx")
 	assert.NoError(t, err, "Failed to deploy nginx pod")
 	assert.Contains(t, podsOutput, "pod/test created")
-	time.Sleep(20 * time.Second)
+	time.Sleep(60 * time.Second)
 	podStatusOutput, _ := runCommand(t, "kubectl", "get", "pods", "test")
 	t.Logf("Pod status output: %s", podStatusOutput)
 	assert.Contains(t, podStatusOutput, "Running")

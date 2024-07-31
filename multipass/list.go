@@ -5,6 +5,7 @@ import (
 	"os/exec"
 )
 
+// List function lists the multipass instances.
 func List() (string, error) {
 	cmd := "multipass list"
 	cmdExec := exec.Command("sh", "-c", cmd)

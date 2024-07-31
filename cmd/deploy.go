@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 Alex Stan
-*/
 package cmd
 
 import (
@@ -9,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -45,6 +43,7 @@ func readInput() string {
 	return input
 }
 
+// CheckMultipass checks if multipass is installed on the system.
 func CheckMultipass() {
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
@@ -83,6 +82,10 @@ func (d *Deployer) RunDeploy(cmd *cobra.Command, args []string) {
 		fmt.Println("There is a cluster currently running! Delete the nodes and deploy a new cluster?(y/n)")
 		input := d.readInput()
 		if input == "y" {
+			re := regexp.MustCompile(`haproxy\s+.*`)
+			if re.MatchString(multipassList) {
+				multipass.Delete(&multipass.DeleteReq{Name: "haproxy"})
+			}
 			k8s.DeleteClusterVMs(k8s.GetCurrentNodes(k8s.FilterNodesListCmd(multipassList)))
 		} else {
 			fmt.Println("Did not delete current cluster. Delete it if you want to deploy a new one.")

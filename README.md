@@ -9,7 +9,6 @@ The CLI is based on the Cobra framework (https://cobra.dev/).
 ### Pre-requisites
 
 Make sure to:
-- have Go installed on your Mac (https://go.dev/doc/install)
 - have latest Multipass version installed on your Mac (https://multipass.run/docs/install-multipass)
 
 ### Installation
